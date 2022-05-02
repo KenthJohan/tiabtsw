@@ -3,7 +3,7 @@
 
 manifest:
   self:
-    path: example-application
+    path: tiabtsw
 
   remotes:
     - name: zephyrproject-rtos
