@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+
 #include <zephyr.h>
 #include <drivers/sensor.h>
 
@@ -10,6 +11,12 @@
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
+
+
+//struct spi_dt_spec spi_spec1 = SPI_DT_SPEC_GET(DT_NODELABEL(foo), SPI_WORD_SET(8) | SPI_MODE_GET(0), 1);
+int i = DT_SPI_DEV_CS_GPIOS_PIN(DT_NODELABEL(foo));
+
+const struct device *sensor1 = DEVICE_DT_GET(DT_NODELABEL(foo));
 
 void main(void)
 {

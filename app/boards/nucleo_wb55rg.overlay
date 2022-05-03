@@ -20,3 +20,16 @@
 &gpioc {
 	status = "okay";
 };
+
+&spi1 {
+	status = "okay";
+	pinctrl-0 = <&spi1_nss_pa4 &spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
+	cs-gpios = <&gpioa 4 GPIO_ACTIVE_LOW>;
+	foo: foo@0 {
+		status = "okay";
+		compatible = "zephyr,foo";
+		reg = <0>;
+		spi-max-frequency = <2000000>;
+		label = "foo";
+	};
+};
