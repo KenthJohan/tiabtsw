@@ -3,5 +3,4 @@
 
 if SENSOR
 rsource "examplesensor/Kconfig"
-rsource "foo/Kconfig"
 endif # SENSOR
