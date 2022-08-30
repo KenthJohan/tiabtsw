@@ -13,3 +13,6 @@ configure_file(app_version.h.in ${CMAKE_BINARY_DIR}/app/include/app_version.h)
 target_include_directories(app PRIVATE ${CMAKE_BINARY_DIR}/app/include src)
 
 target_sources(app PRIVATE src/main.c)
+
+FILE(GLOB app_sources src/*.c)
+target_sources(app PRIVATE ${app_sources})
