@@ -3,8 +3,8 @@
 #include <zephyr/kernel.h>
 
 
-#define ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE 512
-#define ADC_MCP356X_ACQUISITION_THREAD_PRIO 0
+#define ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE 1024
+#define ADC_MCP356X_ACQUISITION_THREAD_PRIO 100
 
 struct mcp356x_config
 {
@@ -16,6 +16,7 @@ struct mcp356x_config
 	struct k_thread thread;		/* Acquisition thread */
 	int dummy;
 	K_KERNEL_STACK_MEMBER(stack, ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE);
+	int h[8];
 };
 
 

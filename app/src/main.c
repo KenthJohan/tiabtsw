@@ -34,10 +34,13 @@ void main(void)
 	while (1)
 	{
 		egadc_print(&c);
-		printk("dummy %i\n", c.dummy);
-		c.dummy = 0;
+		printk("h %i %i %i %i\n", c.h[0], c.h[1], c.h[2], c.h[3]);
+		c.h[0] = 0;
+		c.h[1] = 0;
+		c.h[2] = 0;
+		c.h[3] = 0;
 		
-		k_sem_give(&c.acq_sem);
+		//k_sem_give(&c.acq_sem);
 		k_sleep(K_MSEC(1000));
 	}
 }

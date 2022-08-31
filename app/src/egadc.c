@@ -187,22 +187,26 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 	printk("mcp356x_acquisition_thread started!\n");
 	while (true)
 	{
-		k_sem_take(&config->acq_sem, K_FOREVER);
+		//k_sem_take(&config->acq_sem, K_FOREVER);
 		k_sem_take(&config->drdy_sem, K_SECONDS(12));
 
 
+		int err = 0;
+
 		struct mcp356x_data11 data;
-		int err;
 		err = mcp356x_data11_get(&config->bus, &data);
-		printk("mcp356x_data11 %i!\n", data.channel);
+		if (data.channel < 8)
+		{
+			config->h[data.channel]++;
+		}
+
+
+		//printk("mcp356x_data11 %i!\n", (int)data.channel);
+		//printk("§§err %i!\n", err);
 		if (err)
 		{
-			printk("err %i!\n", err);
-			return;
-		}
-		//if (config->dummy % 10000 == 0)
-		{
-			//printk("cdummy %i!\n", config->dummy);
+			//printk("mcp356x_acquisition_thread error: %i\n", err);
+			//return;
 		}
 	}
 }
@@ -278,7 +282,7 @@ void egadc_init(struct mcp356x_config * config)
 	0
 	);
 	//set24_verbose(MCP356X_REG_SCAN, 0);
-	set24_verbose(&config->bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0|MCP356X_SCAN_CH1|MCP356X_SCAN_CH2);
+	set24_verbose(&config->bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0|MCP356X_SCAN_CH1|MCP356X_SCAN_CH2|MCP356X_SCAN_CH3);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH3);
 	
@@ -306,7 +310,7 @@ void egadc_init(struct mcp356x_config * config)
 			ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE,
 			(k_thread_entry_t)mcp356x_acquisition_thread,
 			(void *)config, NULL, NULL,
-			ADC_MCP356X_ACQUISITION_THREAD_PRIO,
+			K_PRIO_COOP(ADC_MCP356X_ACQUISITION_THREAD_PRIO),
 			0, K_NO_WAIT);
 	/* Add instance number to thread name? */
 	k_thread_name_set(&config->thread, "mcp356x");
@@ -336,8 +340,8 @@ void egadc_print(struct mcp356x_config * config)
 	// printk("Voltage0: %4i\n", (int)voltage_ch(MCP356X_MUX_VIN_POS_CH0));
 	// printk("Voltage7: %4i\n", (int)voltage_ch(MCP356X_MUX_VIN_POS_CH7));
 	//printk("ADCDATA: %08x\n", get32(MCP356X_REG_ADC_DATA));
-	struct mcp356x_data11 data;
-	mcp356x_data11_get(&config->bus, &data);
+	//struct mcp356x_data11 data;
+	//mcp356x_data11_get(&config->bus, &data);
 	//printk("Voltage: %02x %08x %08i\n", data.channel, data.value, MCP356X_raw_to_mv(data.value, VREF, MY_GAIN));
 	//printk("%x\n", data.channel);
 }
