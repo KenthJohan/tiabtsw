@@ -20,28 +20,12 @@ struct examplesensor_config {
 	struct gpio_dt_spec input;
 };
 
-static int examplesensor_sample_fetch(const struct device *dev,
-				      enum sensor_channel chan)
-{
-	const struct examplesensor_config *config = dev->config;
-	struct examplesensor_data *data = dev->data;
-
-	data->state = gpio_pin_get_dt(&config->input);
-
+static int examplesensor_sample_fetch(const struct device *dev, enum sensor_channel chan){
 	return 0;
 }
 
-static int examplesensor_channel_get(const struct device *dev,
-				     enum sensor_channel chan,
-				     struct sensor_value *val)
+static int examplesensor_channel_get(const struct device *dev,enum sensor_channel chan,struct sensor_value *val)
 {
-	struct examplesensor_data *data = dev->data;
-
-	if (chan != SENSOR_CHAN_PROX) {
-		return -ENOTSUP;
-	}
-
-	val->val1 = data->state;
 
 	return 0;
 }
@@ -54,20 +38,6 @@ static const struct sensor_driver_api examplesensor_api = {
 static int examplesensor_init(const struct device *dev)
 {
 	const struct examplesensor_config *config = dev->config;
-
-	int ret;
-
-	if (!device_is_ready(config->input.port)) {
-		LOG_ERR("Input GPIO not ready");
-		return -ENODEV;
-	}
-
-	ret = gpio_pin_configure_dt(&config->input, GPIO_INPUT);
-	if (ret < 0) {
-		LOG_ERR("Could not configure input GPIO (%d)", ret);
-		return ret;
-	}
-
 	return 0;
 }
 
@@ -75,7 +45,6 @@ static int examplesensor_init(const struct device *dev)
 	static struct examplesensor_data examplesensor_data_##i;	       \
 									       \
 	static const struct examplesensor_config examplesensor_config_##i = {  \
-		.input = GPIO_DT_SPEC_INST_GET(i, input_gpios),		       \
 	};								       \
 									       \
 	DEVICE_DT_INST_DEFINE(i, examplesensor_init, NULL,		       \

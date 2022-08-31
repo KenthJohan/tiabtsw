@@ -1,10 +1,9 @@
 #include "egadc.h"
 
-#pragma once
 #include "MCP356X.h"
 
 #include <zephyr/drivers/spi.h>
-
+#include <zephyr/sys/util.h>
 
 // The ADC9 uses 2000mV voltage ref chip MCP1501
 #define VREF  2048
@@ -104,7 +103,7 @@ static uint32_t get32(const struct spi_dt_spec *bus, uint8_t reg)
 	return v;
 }
 
-static void mcp356x_data11_get(const struct spi_dt_spec *bus, struct mcp356x_data11 * value)
+static int mcp356x_data11_get(const struct spi_dt_spec *bus, struct mcp356x_data11 * value)
 {
 	uint8_t tx[5] = {0};
 	uint8_t rx[5] = {0};
@@ -118,9 +117,11 @@ static void mcp356x_data11_get(const struct spi_dt_spec *bus, struct mcp356x_dat
 	tx[3] = 0; // Need to write in order to read. Exchange 0 for reading data.
 	tx[4] = 0; // Need to write in order to read. Exchange 0 for reading data.
 	
-	printk("rx: %02x %02x %02x %02x %02x\n", rx[0], rx[1], rx[2], rx[3], rx[4]);
+	//printk("rx: %02x %02x %02x %02x %02x\n", rx[0], rx[1], rx[2], rx[3], rx[4]);
 
-	spi_transceive_dt(bus, &tx_buf, &rx_buf);
+	int err;
+	err = spi_transceive_dt(bus, &tx_buf, &rx_buf);
+	if (err) {return err;}
 	value->channel = rx[1] >> 4;
 	uint8_t sign = rx[1] & 0x01;
 	value->value = (rx[2] << 16) | (rx[3] << 8) | (rx[4] << 0);
@@ -162,6 +163,52 @@ static void set24_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint32_t v
 	printk("SET24: %s: %08x %08x\n", MCP356X_REG_tostring(reg), value, v);
 }
 
+
+
+
+
+
+
+
+static void drdy_callback(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
+{
+	struct mcp356x_config *config = CONTAINER_OF(cb, struct mcp356x_config, drdy_cb);
+	
+	k_sem_give(&config->drdy_sem);
+	//struct mcp356x_data11 data;
+	//mcp356x_data11_get(&config->bus, &data);
+}
+
+
+
+
+static void mcp356x_acquisition_thread(struct mcp356x_config * config)
+{
+	printk("mcp356x_acquisition_thread started!\n");
+	while (true)
+	{
+		k_sem_take(&config->acq_sem, K_FOREVER);
+		k_sem_take(&config->drdy_sem, K_SECONDS(12));
+
+
+		struct mcp356x_data11 data;
+		int err;
+		err = mcp356x_data11_get(&config->bus, &data);
+		printk("mcp356x_data11 %i!\n", data.channel);
+		if (err)
+		{
+			printk("err %i!\n", err);
+			return;
+		}
+		//if (config->dummy % 10000 == 0)
+		{
+			//printk("cdummy %i!\n", config->dummy);
+		}
+	}
+}
+
+
+
 /*
 5.3.1
 ANALOG GAIN
@@ -189,22 +236,24 @@ Delta-Sigma modulator must not be exceeded.
 */
 #define MY_GAIN MCP356X_CFG_2_GAIN_X_033
 
-void egadc_init(const struct spi_dt_spec *bus)
+void egadc_init(struct mcp356x_config * config)
 {
 	printk("Init ADC MCP356X\n");
 
-	set8_verbose(bus, MCP356X_REG_CFG_0,
+
+
+	set8_verbose(&config->bus, MCP356X_REG_CFG_0,
 	MCP356X_CFG_0_VREF_SEL_0 |
 	MCP356X_CFG_0_CLK_SEL_2 |
 	MCP356X_CFG_0_CS_SEL_0 |
 	MCP356X_CFG_0_MODE_CONV
 	);
-	set8_verbose(bus, MCP356X_REG_CFG_1,
+	set8_verbose(&config->bus, MCP356X_REG_CFG_1,
 	MCP356X_CFG_1_PRE_1 |
 	MCP356X_CFG_1_OSR_32 |
 	MCP356X_CFG_1_DITHER_DEF
 	);
-	set8_verbose(bus, MCP356X_REG_CFG_2,
+	set8_verbose(&config->bus, MCP356X_REG_CFG_2,
 	MCP356X_CFG_2_BOOST_X_1 |
 	//MCP356X_CFG_2_GAIN_X_1 |
 	MY_GAIN |
@@ -212,7 +261,7 @@ void egadc_init(const struct spi_dt_spec *bus)
 	MCP356X_CFG_2_AZ_VREF_EN |
 	MCP356X_CFG_2_AZ_FREQ_HIGH
 	);
-	set8_verbose(bus, MCP356X_REG_CFG_3,
+	set8_verbose(&config->bus, MCP356X_REG_CFG_3,
 	MCP356X_CFG_3_CONV_MODE_CONT |
 	//MCP356X_CFG_3_DATA_FORMAT_DEF |
 	MCP356X_CFG_3_DATA_FORMAT_CH_ADC |
@@ -221,7 +270,7 @@ void egadc_init(const struct spi_dt_spec *bus)
 	MCP356X_CFG_3_CRC_OFF_CAL_EN |
 	MCP356X_CFG_3_CRC_GAIN_CAL_EN
 	);
-	set8_verbose(bus, MCP356X_REG_MUX,
+	set8_verbose(&config->bus, MCP356X_REG_MUX,
 	MCP356X_MUX_VIN_POS_CH0 | 
 	MCP356X_MUX_VIN_NEG_CH1 |
 	//MCP356X_MUX_VIN_POS_CH0 | 
@@ -229,22 +278,47 @@ void egadc_init(const struct spi_dt_spec *bus)
 	0
 	);
 	//set24_verbose(MCP356X_REG_SCAN, 0);
-	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0|MCP356X_SCAN_CH1|MCP356X_SCAN_CH2);
-	set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);
+	set24_verbose(&config->bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0|MCP356X_SCAN_CH1|MCP356X_SCAN_CH2);
+	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH3);
 	
-	//set24_verbose(MCP356X_REG_IRQ, MCP356X_IRQ_MODE_LOGIC_HIGH);
-	set24_verbose(bus, MCP356X_REG_OFFSET_CAL, 0);
-	set24_verbose(bus, MCP356X_REG_GAIN_CAL, 0x00800000);
+	set24_verbose(&config->bus, MCP356X_REG_IRQ, MCP356X_IRQ_MODE_LOGIC_HIGH);
+	set24_verbose(&config->bus, MCP356X_REG_OFFSET_CAL, 0);
+	set24_verbose(&config->bus, MCP356X_REG_GAIN_CAL, 0x00800000);
 	//set24_verbose(MCP356X_RSV_REG_W_A, 0x00900F00);
-	set24_verbose(bus, MCP356X_RSV_REG_W_A, 0x00900000);
+	set24_verbose(&config->bus, MCP356X_RSV_REG_W_A, 0x00900000);
+
+
+	int err;
+	err = gpio_pin_configure_dt(&config->irq, GPIO_INPUT);
+	if (err) {return err;}
+	err = gpio_pin_interrupt_configure_dt(&config->irq, GPIO_INT_EDGE_TO_ACTIVE);
+	if (err) {return err;}
+	gpio_init_callback(&config->drdy_cb, drdy_callback, BIT(config->irq.pin));
+	printk("gpio_init_callback %i\n", config->irq.pin);
+	err = gpio_add_callback(config->irq.port, &config->drdy_cb);
+	if (err) {return err;}
+
+	k_sem_init(&config->acq_sem, 0, 1);
+	k_sem_init(&config->drdy_sem, 0, 1);
+
+	k_thread_create(&config->thread, config->stack,
+			ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE,
+			(k_thread_entry_t)mcp356x_acquisition_thread,
+			(void *)config, NULL, NULL,
+			ADC_MCP356X_ACQUISITION_THREAD_PRIO,
+			0, K_NO_WAIT);
+	/* Add instance number to thread name? */
+	k_thread_name_set(&config->thread, "mcp356x");
+
+
 }
 
 
 
 
 
-void egadc_print(const struct spi_dt_spec *bus)
+void egadc_print(struct mcp356x_config * config)
 {
 	/*
 	printk("Channel:  ch0  ch1  ch2  ch3  ch4  ch5  ch6  ch7\n"), 
@@ -263,8 +337,9 @@ void egadc_print(const struct spi_dt_spec *bus)
 	// printk("Voltage7: %4i\n", (int)voltage_ch(MCP356X_MUX_VIN_POS_CH7));
 	//printk("ADCDATA: %08x\n", get32(MCP356X_REG_ADC_DATA));
 	struct mcp356x_data11 data;
-	mcp356x_data11_get(bus, &data);
-	printk("Voltage: %02x %08x %08i\n", data.channel, data.value, MCP356X_raw_to_mv(data.value, VREF, MY_GAIN));
+	mcp356x_data11_get(&config->bus, &data);
+	//printk("Voltage: %02x %08x %08i\n", data.channel, data.value, MCP356X_raw_to_mv(data.value, VREF, MY_GAIN));
+	//printk("%x\n", data.channel);
 }
 
 
