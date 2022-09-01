@@ -12,38 +12,6 @@ LOG_MODULE_REGISTER(adc_mcp356x, LOG_LEVEL_DBG);
 // The ADC9 uses 2000mV voltage ref chip MCP1501
 #define VREF  2048
 
-
-// https://os.mbed.com/platforms/ST-Nucleo-WB55RG/
-// https://github.com/zephyrproject-rtos/zephyr/blob/main/boards/arm/nucleo_wb55rg/nucleo_wb55rg.dts
-/*
-&spi1 {
-	pinctrl-0 = <&spi1_nss_pa4 &spi1_sck_pa5
-		     &spi1_miso_pa6 &spi1_mosi_pa7>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-*/
-// ADC pin CSK ---orange--- (PA5,D13,20,SCK)
-// ADC pin SDO ---yellow--- (PA6,D12,21,MISO)
-// ADC pin SDI ---green---- (PA7,D11,22,MOSI)
-// ADC pin CS  ---white---- (PA4,D10)
-// https://github.com/zephyrproject-rtos/zephyr-testing/blob/0f09360456592ecf0d0413352dc1ef5d23cd0364/include/drivers/spi.h#L252
-// https://github.com/zephyrproject-rtos/zephyr-testing/blob/2fc0ace3c2462cb33dc8c25e33c629cedba08ebb/boards/arm/rm1xx_dvk/rm1xx_dvk.dts#L60
-// https://github.com/zephyrproject-rtos/zephyr/blob/ee91cd5665b1590c9a8a9a992bb19d81feeeb461/boards/arm/bt610/bt610.dts#L268
-
-//struct spi_cs_control *ctrl = SPI_CS_CONTROL_PTR_DT(DT_NODELABEL(spi1), 2);
-//struct spi_dt_spec spi_spec1 = SPI_DT_SPEC_GET(DT_NODELABEL(spi1), SPI_WORD_SET(8) | SPI_MODE_GET(0), 1);
-
-
-
-
-//static struct device const * dev_spi1 = DEVICE_DT_GET(DT_NODELABEL(spi1));
-//static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_NODELABEL(blue_led_1), gpios);
-//static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_NODELABEL(green_led_2), gpios);
-//static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(DT_NODELABEL(green_led_3), gpios);
-
-
-
 static void set8(const struct spi_dt_spec *bus, uint8_t reg, uint8_t value)
 {
 	uint8_t tx[2] = {0};
