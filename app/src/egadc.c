@@ -4,6 +4,10 @@
 
 #include <zephyr/drivers/spi.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/logging/log.h>
+
+
+LOG_MODULE_REGISTER(adc_mcp356x, LOG_LEVEL_DBG);
 
 // The ADC9 uses 2000mV voltage ref chip MCP1501
 #define VREF  2048
@@ -153,14 +157,14 @@ static void set8_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint8_t val
 {
 	set8(bus, reg, value);
 	uint8_t v = get8(bus, reg);
-	printk("SET8: %s: %02x %02x\n", MCP356X_REG_tostring(reg), value, v);
+	LOG_INF("SET8: %s: %02x %02x", MCP356X_REG_tostring(reg), value, v);
 }
 
 static void set24_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
 {
 	set24(bus, reg, value);
 	uint32_t v = get24(bus, reg);
-	printk("SET24: %s: %08x %08x\n", MCP356X_REG_tostring(reg), value, v);
+	LOG_INF("SET24: %s: %08x %08x", MCP356X_REG_tostring(reg), value, v);
 }
 
 
@@ -173,7 +177,6 @@ static void set24_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint32_t v
 static void drdy_callback(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mcp356x_config *config = CONTAINER_OF(cb, struct mcp356x_config, drdy_cb);
-	
 	k_sem_give(&config->drdy_sem);
 	//struct mcp356x_data11 data;
 	//mcp356x_data11_get(&config->bus, &data);
@@ -184,7 +187,7 @@ static void drdy_callback(const struct device *port, struct gpio_callback *cb, g
 
 static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 {
-	printk("mcp356x_acquisition_thread started!\n");
+	LOG_INF("mcp356x_acquisition_thread started!");
 	while (true)
 	{
 		//k_sem_take(&config->acq_sem, K_FOREVER);
@@ -242,7 +245,7 @@ Delta-Sigma modulator must not be exceeded.
 
 void egadc_init(struct mcp356x_config * config)
 {
-	printk("Init ADC MCP356X\n");
+	LOG_INF("Init ADC MCP356X");
 
 
 
@@ -299,7 +302,7 @@ void egadc_init(struct mcp356x_config * config)
 	err = gpio_pin_interrupt_configure_dt(&config->irq, GPIO_INT_EDGE_TO_ACTIVE);
 	if (err) {return err;}
 	gpio_init_callback(&config->drdy_cb, drdy_callback, BIT(config->irq.pin));
-	printk("gpio_init_callback %i\n", config->irq.pin);
+	LOG_INF("gpio_init_callback %i", config->irq.pin);
 	err = gpio_add_callback(config->irq.port, &config->drdy_cb);
 	if (err) {return err;}
 
@@ -311,6 +314,7 @@ void egadc_init(struct mcp356x_config * config)
 			(k_thread_entry_t)mcp356x_acquisition_thread,
 			(void *)config, NULL, NULL,
 			K_PRIO_COOP(ADC_MCP356X_ACQUISITION_THREAD_PRIO),
+			//0,
 			0, K_NO_WAIT);
 	/* Add instance number to thread name? */
 	k_thread_name_set(&config->thread, "mcp356x");

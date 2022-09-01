@@ -21,7 +21,7 @@ struct mcp356x_config c =
 
 void main(void)
 {
-	printk("Zephyr Example Application %s\n", APP_VERSION_STR);
+	LOG_INF("Zephyr Example Application %s", APP_VERSION_STR);
 
 	if (!spi_is_ready(&c.bus))
 	{
