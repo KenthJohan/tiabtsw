@@ -240,13 +240,14 @@ void egadc_init(struct mcp356x_config * config)
 	set24_verbose(&config->bus, MCP356X_RSV_REG_W_A, 0x00900000);
 
 
+
+	LOG_INF("Configuring port %s %i",config->irq.port->name, config->irq.pin);
 	int err;
 	err = gpio_pin_configure_dt(&config->irq, GPIO_INPUT);
 	if (err) {return err;}
 	err = gpio_pin_interrupt_configure_dt(&config->irq, GPIO_INT_EDGE_TO_ACTIVE);
 	if (err) {return err;}
 	gpio_init_callback(&config->drdy_cb, drdy_callback, BIT(config->irq.pin));
-	LOG_INF("gpio_init_callback %i", config->irq.pin);
 	err = gpio_add_callback(config->irq.port, &config->drdy_cb);
 	if (err) {return err;}
 

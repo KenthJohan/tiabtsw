@@ -73,12 +73,24 @@ edge) to change its command type.
 The MCP3561/2/4 devices have a total of 16 internal
 registers made of volatile memory.
 *****************************************************************/
+
+/*
+8.1 ADCDATA Register
+The data can be
+formatted in 24/32-bit modes depending on the DATA_FORMAT
+*/
 #define MCP356X_REG_ADC_DATA                 0x00
+/*
+8.2 CONFIG0 Register
+*/
 #define MCP356X_REG_CFG_0                    0x01
 #define MCP356X_REG_CFG_1                    0x02
 #define MCP356X_REG_CFG_2                    0x03
 #define MCP356X_REG_CFG_3                    0x04
 #define MCP356X_REG_IRQ                      0x05
+/*
+5.1 Analog Input Multiplexer
+*/
 #define MCP356X_REG_MUX                      0x06
 #define MCP356X_REG_SCAN                     0x07
 #define MCP356X_REG_TIMER                    0x08
