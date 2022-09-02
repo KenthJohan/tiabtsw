@@ -184,31 +184,7 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 
 
 
-/*
-5.3.1
-ANALOG GAIN
-The gain settings from 0.33x to 16x are done in the
-analog domain. This analog gain is placed on each ADC
-differential input. Each doubling of the gain improves the
-thermal noise due to sampling by approximately 3 dB,
-which means the lowest noise configuration is obtained
-when using the highest analog gain. The SNR, however,
-is degraded, since doubling the gain factor reduces the
-maximum allowable input signal amplitude by
-approximately 6 dB.
-If the gain is set to 0.33x, the differential input range
-theoretically becomes ±3 * VREF. However, the device
-does not support input voltages outside of the power
-supply voltage range. If large reference voltages are
-used with this gain, the input voltage range will be
-clipped between AGND and AVDD, and therefore, the
-output code span will be limited. This gain is useful
-when the reference voltage is small and when the
-input signal voltage is large.
-The analog gain stage can be used to amplify very low
-signals, but the differential input range of the
-Delta-Sigma modulator must not be exceeded.
-*/
+
 #define MY_GAIN MCP356X_CFG_2_GAIN_X_033
 
 void egadc_init(struct mcp356x_config * config)

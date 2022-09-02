@@ -15,8 +15,8 @@ struct mcp356x_config
 	struct gpio_callback drdy_cb;	/* For data ready IRQ */
 	struct k_thread thread;		/* Acquisition thread */
 	int dummy;
-	K_KERNEL_STACK_MEMBER(stack, ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE);
 	int h[8];
+	K_KERNEL_STACK_MEMBER(stack, ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE);
 };
 
 
