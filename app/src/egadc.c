@@ -168,8 +168,16 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 		}
 		if (channel < MCP356X_CHANNEL_COUNT)
 		{
-			config->h[channel]++;
+			config->n[channel]++;
 			config->mv[channel] = MCP356X_raw_to_millivolt(value, VREF, MY_GAIN);
+			config->sum[channel] += config->mv[channel];
+		}
+		// After 1000 samples then calculate average:
+		if(config->n[channel] > 1000)
+		{
+			config->avg[channel] = config->sum[channel] / config->n[channel];
+			config->n[channel] = 0;
+			config->sum[channel] = 0;
 		}
 	}
 }
@@ -225,6 +233,7 @@ int egadc_init(struct mcp356x_config * config)
 	//set24_verbose(MCP356X_REG_SCAN, 0);
 	set24_verbose(&config->bus, MCP356X_REG_SCAN, 
 	MCP356X_SCAN_CH0|
+	/*
 	MCP356X_SCAN_CH1|
 	MCP356X_SCAN_CH2|
 	MCP356X_SCAN_CH3|
@@ -234,6 +243,8 @@ int egadc_init(struct mcp356x_config * config)
 	MCP356X_SCAN_VREF|
 	MCP356X_SCAN_TEMP|
 	MCP356X_SCAN_AVDD|
+	MCP356X_SCAN_OFFSET|
+	*/
 	0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH3);
@@ -273,66 +284,6 @@ int egadc_init(struct mcp356x_config * config)
 }
 
 
-void egadc_print_millivolt(struct mcp356x_config * c)
-{
-	printk("mv %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i\n", 
-	c->mv[MCP356X_CH_OFFSET], 
-	c->mv[MCP356X_CH_VREF  ], 
-	c->mv[MCP356X_CH_AVDD  ], 
-	c->mv[MCP356X_CH_TEMP  ], 
-	c->mv[MCP356X_CH_DIFF_D], 
-	c->mv[MCP356X_CH_DIFF_C], 
-	c->mv[MCP356X_CH_DIFF_B], 
-	c->mv[MCP356X_CH_DIFF_A], 
-	c->mv[MCP356X_CH_CH7   ], 
-	c->mv[MCP356X_CH_CH6   ], 
-	c->mv[MCP356X_CH_CH5   ], 
-	c->mv[MCP356X_CH_CH4   ], 
-	c->mv[MCP356X_CH_CH3   ], 
-	c->mv[MCP356X_CH_CH2   ], 
-	c->mv[MCP356X_CH_CH1   ], 
-	c->mv[MCP356X_CH_CH0   ]
-	);
-}
-
-
-void egadc_print_histo(struct mcp356x_config * c)
-{
-	printk("n  %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i\n", 
-	c->h[MCP356X_CH_OFFSET], 
-	c->h[MCP356X_CH_VREF  ], 
-	c->h[MCP356X_CH_AVDD  ], 
-	c->h[MCP356X_CH_TEMP  ], 
-	c->h[MCP356X_CH_DIFF_D], 
-	c->h[MCP356X_CH_DIFF_C], 
-	c->h[MCP356X_CH_DIFF_B], 
-	c->h[MCP356X_CH_DIFF_A], 
-	c->h[MCP356X_CH_CH7   ], 
-	c->h[MCP356X_CH_CH6   ], 
-	c->h[MCP356X_CH_CH5   ], 
-	c->h[MCP356X_CH_CH4   ], 
-	c->h[MCP356X_CH_CH3   ], 
-	c->h[MCP356X_CH_CH2   ], 
-	c->h[MCP356X_CH_CH1   ], 
-	c->h[MCP356X_CH_CH0   ]
-	);
-	c->h[MCP356X_CH_OFFSET] = 0;
-	c->h[MCP356X_CH_VREF  ] = 0;
-	c->h[MCP356X_CH_AVDD  ] = 0;
-	c->h[MCP356X_CH_TEMP  ] = 0;
-	c->h[MCP356X_CH_DIFF_D] = 0;
-	c->h[MCP356X_CH_DIFF_C] = 0;
-	c->h[MCP356X_CH_DIFF_B] = 0;
-	c->h[MCP356X_CH_DIFF_A] = 0;
-	c->h[MCP356X_CH_CH7   ] = 0;
-	c->h[MCP356X_CH_CH6   ] = 0;
-	c->h[MCP356X_CH_CH5   ] = 0;
-	c->h[MCP356X_CH_CH4   ] = 0;
-	c->h[MCP356X_CH_CH3   ] = 0;
-	c->h[MCP356X_CH_CH2   ] = 0;
-	c->h[MCP356X_CH_CH1   ] = 0;
-	c->h[MCP356X_CH_CH0   ] = 0;
-}
 
 
 

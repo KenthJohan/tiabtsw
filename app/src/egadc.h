@@ -15,12 +15,12 @@ struct mcp356x_config
 	struct gpio_callback drdy_cb;	/* For data ready IRQ */
 	struct k_thread thread;		/* Acquisition thread */
 	int dummy;
-	int h[MCP356X_CHANNEL_COUNT];
+	int n[MCP356X_CHANNEL_COUNT];
 	int mv[MCP356X_CHANNEL_COUNT];
+	int sum[MCP356X_CHANNEL_COUNT];
+	int avg[MCP356X_CHANNEL_COUNT];
 	K_KERNEL_STACK_MEMBER(stack, ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE);
 };
 
 
 int egadc_init(struct mcp356x_config * config);
-void egadc_print_millivolt(struct mcp356x_config * c);
-void egadc_print_histo(struct mcp356x_config * c);

@@ -33,8 +33,8 @@ void main(void)
 
 	while (1)
 	{
-		egadc_print_histo(&c);
-		egadc_print_millivolt(&c);
+		printk("avg " MCP356X_PRINTF_PLUS "\n", MCP356X_ARGS(c.avg));
+		printk("mv  " MCP356X_PRINTF_PLUS "\n", MCP356X_ARGS(c.mv));
 		
 		//k_sem_give(&c.acq_sem);
 		k_sleep(K_MSEC(1000));

@@ -431,7 +431,25 @@ Analog multiplexer input selection (MUX mode only)
 #define MCP356X_CALC_COEF                    8388608
 
 
-
+#define MCP356X_PRINTF_PLUS "%+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i"
+#define MCP356X_PRINTF "%05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i"
+#define MCP356X_ARGS(x) \
+(x)[MCP356X_CH_OFFSET],  \
+(x)[MCP356X_CH_VREF],  \
+(x)[MCP356X_CH_AVDD],  \
+(x)[MCP356X_CH_TEMP],  \
+(x)[MCP356X_CH_DIFF_D],  \
+(x)[MCP356X_CH_DIFF_C],  \
+(x)[MCP356X_CH_DIFF_B],  \
+(x)[MCP356X_CH_DIFF_A],  \
+(x)[MCP356X_CH_CH7],  \
+(x)[MCP356X_CH_CH6],  \
+(x)[MCP356X_CH_CH5],  \
+(x)[MCP356X_CH_CH4],  \
+(x)[MCP356X_CH_CH3],  \
+(x)[MCP356X_CH_CH2],  \
+(x)[MCP356X_CH_CH1],  \
+(x)[MCP356X_CH_CH0]
 
 /*
 111 = Gain is x64 (x16 analog, x4 digital)
