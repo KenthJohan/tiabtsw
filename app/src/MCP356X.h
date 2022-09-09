@@ -283,11 +283,6 @@ communications, enable for digital offset and gain error calibrations
 #define MCP356X_CFG_3_CRC_GAIN_CAL_EN        0x01
 #define MCP356X_CFG_3_CRC_GAIN_CAL_DIS       0x00
 
-struct mcp356x_data11
-{
-	uint8_t channel;
-	uint32_t value;
-};
 
 
 /*******************************************************************
@@ -381,6 +376,26 @@ Analog multiplexer input selection (MUX mode only)
 #define MCP356X_SCAN_CH1                     0x00000002
 #define MCP356X_SCAN_CH0                     0x00000001
 
+#define MCP356X_CHANNEL_COUNT 16
+#define MCP356X_CH_OFFSET   15
+#define MCP356X_CH_VREF     14
+#define MCP356X_CH_AVDD     13
+#define MCP356X_CH_TEMP     12
+#define MCP356X_CH_DIFF_D   11
+#define MCP356X_CH_DIFF_C   10
+#define MCP356X_CH_DIFF_B   9
+#define MCP356X_CH_DIFF_A   8
+#define MCP356X_CH_CH7      7
+#define MCP356X_CH_CH6      6
+#define MCP356X_CH_CH5      5
+#define MCP356X_CH_CH4      4
+#define MCP356X_CH_CH3      3
+#define MCP356X_CH_CH2      2
+#define MCP356X_CH_CH1      1
+#define MCP356X_CH_CH0      0
+
+
+
 // 8.9 TIMER Register
 #define MCP356X_TIMER_DLY_DMCLK_X_16777215   0x00FFFFFF
 #define MCP356X_TIMER_DLY_DMCLK_X_8388607    0x007FFFFF
@@ -429,7 +444,7 @@ Analog multiplexer input selection (MUX mode only)
 000 = Gain is x1/3
 */
 
-static int32_t MCP356X_raw_to_mv(int32_t raw, int32_t vref, int32_t gain)
+static int32_t MCP356X_raw_to_millivolt(int32_t raw, int32_t vref, int32_t gain)
 {
 	int32_t c = (MCP356X_CALC_COEF / vref);
 	switch(gain)
@@ -446,4 +461,16 @@ static int32_t MCP356X_raw_to_mv(int32_t raw, int32_t vref, int32_t gain)
 	int32_t mv;
 	mv = raw / c;
 	return mv;
+}
+
+
+static void MCP356X_ADC_DATA_decode(uint8_t rx[5], int32_t * value, uint32_t * channel)
+{
+	(*channel) = rx[1] >> 4;
+	uint8_t sign = rx[1] & 0x01;
+	(*value) = (rx[2] << 16) | (rx[3] << 8) | (rx[4] << 0);
+	if (sign != 0)
+	{
+		(*value) -= 16777215;
+	}
 }

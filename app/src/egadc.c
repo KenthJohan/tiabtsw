@@ -75,7 +75,7 @@ static uint32_t get32(const struct spi_dt_spec *bus, uint8_t reg)
 	return v;
 }
 
-static int mcp356x_data11_get(const struct spi_dt_spec *bus, struct mcp356x_data11 * value)
+static int mcp356x_data11_get(const struct spi_dt_spec *bus, int32_t * value, uint32_t * channel)
 {
 	uint8_t tx[5] = {0};
 	uint8_t rx[5] = {0};
@@ -91,16 +91,12 @@ static int mcp356x_data11_get(const struct spi_dt_spec *bus, struct mcp356x_data
 	
 	//printk("rx: %02x %02x %02x %02x %02x\n", rx[0], rx[1], rx[2], rx[3], rx[4]);
 
-	int err;
+	int err = 0;
 	err = spi_transceive_dt(bus, &tx_buf, &rx_buf);
 	if (err) {return err;}
-	value->channel = rx[1] >> 4;
-	uint8_t sign = rx[1] & 0x01;
-	value->value = (rx[2] << 16) | (rx[3] << 8) | (rx[4] << 0);
-	if (sign != 0)
-	{
-		value->value -= 16777215;
-	}
+
+	MCP356X_ADC_DATA_decode(rx, value, channel);
+	return 0;
 }
 
 
@@ -151,6 +147,7 @@ static void drdy_callback(const struct device *port, struct gpio_callback *cb, g
 }
 
 
+#define MY_GAIN MCP356X_CFG_2_GAIN_X_033
 
 
 static void mcp356x_acquisition_thread(struct mcp356x_config * config)
@@ -158,26 +155,21 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 	LOG_INF("mcp356x_acquisition_thread started!");
 	while (true)
 	{
+		int err = 0;
 		//k_sem_take(&config->acq_sem, K_FOREVER);
 		k_sem_take(&config->drdy_sem, K_SECONDS(12));
-
-
-		int err = 0;
-
-		struct mcp356x_data11 data;
-		err = mcp356x_data11_get(&config->bus, &data);
-		if (data.channel < 8)
+		int32_t value = 0;
+		uint32_t channel = 0;
+		err = mcp356x_data11_get(&config->bus, &value, &channel);
+		if (err) 
 		{
-			config->h[data.channel]++;
+			printk("mcp356x_acquisition_thread error: %i\n", err);
+			continue;
 		}
-
-
-		//printk("mcp356x_data11 %i!\n", (int)data.channel);
-		//printk("§§err %i!\n", err);
-		if (err)
+		if (channel < MCP356X_CHANNEL_COUNT)
 		{
-			//printk("mcp356x_acquisition_thread error: %i\n", err);
-			//return;
+			config->h[channel]++;
+			config->mv[channel] = MCP356X_raw_to_millivolt(value, VREF, MY_GAIN);
 		}
 	}
 }
@@ -185,9 +177,8 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 
 
 
-#define MY_GAIN MCP356X_CFG_2_GAIN_X_033
 
-void egadc_init(struct mcp356x_config * config)
+int egadc_init(struct mcp356x_config * config)
 {
 	LOG_INF("Init ADC MCP356X");
 
@@ -223,13 +214,27 @@ void egadc_init(struct mcp356x_config * config)
 	);
 	set8_verbose(&config->bus, MCP356X_REG_MUX,
 	MCP356X_MUX_VIN_POS_CH0 | 
-	MCP356X_MUX_VIN_NEG_CH1 |
+	MCP356X_MUX_VIN_POS_CH1 | 
+	MCP356X_MUX_VIN_POS_CH2 | 
+	MCP356X_MUX_VIN_POS_CH3 | 
+	MCP356X_MUX_VIN_POS_TEMP |
+	//MCP356X_MUX_VIN_NEG_CH1 |
 	//MCP356X_MUX_VIN_POS_CH0 | 
 	//MCP356X_MUX_VIN_NEG_AGND |
-	0
-	);
+	0);
 	//set24_verbose(MCP356X_REG_SCAN, 0);
-	set24_verbose(&config->bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0|MCP356X_SCAN_CH1|MCP356X_SCAN_CH2|MCP356X_SCAN_CH3);
+	set24_verbose(&config->bus, MCP356X_REG_SCAN, 
+	MCP356X_SCAN_CH0|
+	MCP356X_SCAN_CH1|
+	MCP356X_SCAN_CH2|
+	MCP356X_SCAN_CH3|
+	MCP356X_SCAN_CH4|
+	MCP356X_SCAN_CH5|
+	MCP356X_SCAN_CH6|
+	MCP356X_SCAN_VREF|
+	MCP356X_SCAN_TEMP|
+	MCP356X_SCAN_AVDD|
+	0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH3);
 	
@@ -268,31 +273,65 @@ void egadc_init(struct mcp356x_config * config)
 }
 
 
-
-
-
-void egadc_print(struct mcp356x_config * config)
+void egadc_print_millivolt(struct mcp356x_config * c)
 {
-	/*
-	printk("Channel:  ch0  ch1  ch2  ch3  ch4  ch5  ch6  ch7\n"), 
-	printk("Voltage: %4i %4i %4i %4i %4i %4i %4i %4i\n", 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH0), 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH1), 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH2), 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH3), 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH4), 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH5), 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH6), 
-	(int)voltage_ch(MCP356X_MUX_VIN_POS_CH7)
+	printk("mv %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i\n", 
+	c->mv[MCP356X_CH_OFFSET], 
+	c->mv[MCP356X_CH_VREF  ], 
+	c->mv[MCP356X_CH_AVDD  ], 
+	c->mv[MCP356X_CH_TEMP  ], 
+	c->mv[MCP356X_CH_DIFF_D], 
+	c->mv[MCP356X_CH_DIFF_C], 
+	c->mv[MCP356X_CH_DIFF_B], 
+	c->mv[MCP356X_CH_DIFF_A], 
+	c->mv[MCP356X_CH_CH7   ], 
+	c->mv[MCP356X_CH_CH6   ], 
+	c->mv[MCP356X_CH_CH5   ], 
+	c->mv[MCP356X_CH_CH4   ], 
+	c->mv[MCP356X_CH_CH3   ], 
+	c->mv[MCP356X_CH_CH2   ], 
+	c->mv[MCP356X_CH_CH1   ], 
+	c->mv[MCP356X_CH_CH0   ]
 	);
-	*/
-	// printk("Voltage0: %4i\n", (int)voltage_ch(MCP356X_MUX_VIN_POS_CH0));
-	// printk("Voltage7: %4i\n", (int)voltage_ch(MCP356X_MUX_VIN_POS_CH7));
-	//printk("ADCDATA: %08x\n", get32(MCP356X_REG_ADC_DATA));
-	//struct mcp356x_data11 data;
-	//mcp356x_data11_get(&config->bus, &data);
-	//printk("Voltage: %02x %08x %08i\n", data.channel, data.value, MCP356X_raw_to_mv(data.value, VREF, MY_GAIN));
-	//printk("%x\n", data.channel);
+}
+
+
+void egadc_print_histo(struct mcp356x_config * c)
+{
+	printk("n  %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i\n", 
+	c->h[MCP356X_CH_OFFSET], 
+	c->h[MCP356X_CH_VREF  ], 
+	c->h[MCP356X_CH_AVDD  ], 
+	c->h[MCP356X_CH_TEMP  ], 
+	c->h[MCP356X_CH_DIFF_D], 
+	c->h[MCP356X_CH_DIFF_C], 
+	c->h[MCP356X_CH_DIFF_B], 
+	c->h[MCP356X_CH_DIFF_A], 
+	c->h[MCP356X_CH_CH7   ], 
+	c->h[MCP356X_CH_CH6   ], 
+	c->h[MCP356X_CH_CH5   ], 
+	c->h[MCP356X_CH_CH4   ], 
+	c->h[MCP356X_CH_CH3   ], 
+	c->h[MCP356X_CH_CH2   ], 
+	c->h[MCP356X_CH_CH1   ], 
+	c->h[MCP356X_CH_CH0   ]
+	);
+	c->h[MCP356X_CH_OFFSET] = 0;
+	c->h[MCP356X_CH_VREF  ] = 0;
+	c->h[MCP356X_CH_AVDD  ] = 0;
+	c->h[MCP356X_CH_TEMP  ] = 0;
+	c->h[MCP356X_CH_DIFF_D] = 0;
+	c->h[MCP356X_CH_DIFF_C] = 0;
+	c->h[MCP356X_CH_DIFF_B] = 0;
+	c->h[MCP356X_CH_DIFF_A] = 0;
+	c->h[MCP356X_CH_CH7   ] = 0;
+	c->h[MCP356X_CH_CH6   ] = 0;
+	c->h[MCP356X_CH_CH5   ] = 0;
+	c->h[MCP356X_CH_CH4   ] = 0;
+	c->h[MCP356X_CH_CH3   ] = 0;
+	c->h[MCP356X_CH_CH2   ] = 0;
+	c->h[MCP356X_CH_CH1   ] = 0;
+	c->h[MCP356X_CH_CH0   ] = 0;
 }
 
 
