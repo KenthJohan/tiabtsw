@@ -1,5 +1,30 @@
 /*
 west build -b nucleo_wb55rg
+
+Booting Zephyr OS build zephyr-v3.1.0-3437-gd9ed09357ee0
+Booting Zephyr OS build zephyr-v3.1.0-4550-g2cbd287e0c21 (tried on laptop, bluetooth problems)
+Booting Zephyr OS build v3.2.0-rc1-57-gb27c5d73ef09
+
+
+
+
+
+
+
+*** Booting Zephyr OS build v3.2.0-rc1-57-gb27c5d73ef09  ***                              
+Bluetooth initialized                                                                       
+Advertising successfully started                                                           
+[00:00:00.326,000] [0m<inf> main: Zephyr Example Application 1.0.0[0m                     
+Connected                                                                               
+[00:05:08.462,000] [1;33m<wrn> hci_ipm: Invalid peer addr FF:FF:FF:FF:FF:FF (random)[0m    
+[00:05:08.464,000] [1;33m<wrn> bt_hci_core: opcode 0x2016 status 0x3a[0m                  
+[00:05:08.464,000] [1;31m<err> bt_hci_core: Failed read remote features (-5)[0m          
+[00:05:08.464,000] [1;33m<wrn> bt_hci_core: opcode 0x2032 status 0x0c[0m                     
+[00:05:08.464,000] [1;31m<err> bt_hci_core: Failed LE Set PHY (-5)[0m                           
+[00:05:15.520,000] [0m<inf> bas: BAS Notifications enabled[0m
+
+
+
 */
 
 #include <zephyr/kernel.h>
@@ -7,7 +32,7 @@ west build -b nucleo_wb55rg
 #include <zephyr/drivers/spi.h>
 
 #include "app_version.h"
-//#include "egadc.h"
+#include "egadc.h"
 #include "bt.h"
 
 #include <zephyr/logging/log.h>

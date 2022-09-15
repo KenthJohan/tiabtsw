@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 // https://github.com/MikroElektronika/mikrosdk_click_v2
 // https://github.com/MikroElektronika/mikrosdk_click_v2/tree/master/clicks/adc9
