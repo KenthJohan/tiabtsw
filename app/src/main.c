@@ -25,6 +25,13 @@ Connected
 
 
 
+*** Booting Zephyr OS build v3.2.0-rc1-57-gb27c5d73ef09  ***
+*** Booting Zephyr OS build v3.2.0-rc3-24-g8364715998c9  ***
+
+
+
+
+
 */
 
 #include <zephyr/kernel.h>
@@ -61,13 +68,14 @@ void main(void)
 	
 	//egadc_init(&c);
 	mybt_init();
-
+	static int i = 0;
 	while (1)
 	{
 		//printk("avg " MCP356X_PRINTF_PLUS "\n", MCP356X_ARGS(c.avg));
 		//printk("mv  " MCP356X_PRINTF_PLUS "\n", MCP356X_ARGS(c.mv));
 		
-		mybt_progress();
+		//mybt_progress();
+		//bt_bas_set_battery_level(i++);
 
 		//k_sem_give(&c.acq_sem);
 		k_sleep(K_MSEC(1000));

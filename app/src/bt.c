@@ -104,7 +104,7 @@ static void bt_ready(int err)
 		LOG_ERR("Bluetooth init failed (err %d)", err);
 		return;
 	}
-	LOG_INF("Bluetooth initialized");
+	LOG_INF("Bluetooth initialized. Connecting and disconnecting and connecting fails.");
 	/* Start advertising */
 	err = bt_le_adv_start(BT_LE_ADV_CONN_NAME, ad, ARRAY_SIZE(ad), NULL, 0);
 	if (err) {
@@ -123,7 +123,7 @@ static void bas_notify(void)
 	if (!battery_level) {
 		battery_level = 100U;
 	}
-	bt_bas_set_battery_level(battery_level);
+	//bt_bas_set_battery_level(battery_level);
 }
 
 
