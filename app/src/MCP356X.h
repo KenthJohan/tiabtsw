@@ -432,7 +432,8 @@ Analog multiplexer input selection (MUX mode only)
 #define MCP356X_CALC_COEF                    8388608
 
 
-#define MCP356X_PRINTF_PLUS "%+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i"
+#define MCP356X_PRINTF_HEADER "OFFST VREF  AVDD  TEMP  DIFFD DIFFC DIFFB DIFFA CH7   CH6   CH5   CH4   CH3   CH2   CH1   CH0"
+#define MCP356X_PRINTF_PLUS   "%+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i %+05i"
 #define MCP356X_PRINTF "%05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i %05i"
 #define MCP356X_ARGS(x) \
 (x)[MCP356X_CH_OFFSET],  \

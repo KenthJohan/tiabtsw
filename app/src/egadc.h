@@ -15,6 +15,8 @@ struct mcp356x_config
 	struct gpio_callback drdy_cb;	/* For data ready IRQ */
 	struct k_thread thread;		/* Acquisition thread */
 	int dummy;
+	int num_irq;
+	int num_drdy;
 	int n[MCP356X_CHANNEL_COUNT];
 	int mv[MCP356X_CHANNEL_COUNT];
 	int sum[MCP356X_CHANNEL_COUNT];

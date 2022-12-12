@@ -10,7 +10,8 @@
 LOG_MODULE_REGISTER(adc_mcp356x, LOG_LEVEL_DBG);
 
 // The ADC9 uses 2000mV voltage ref chip MCP1501
-#define VREF  2048
+//#define VREF  2048
+#define VREF 3000
 
 static void set8(const struct spi_dt_spec *bus, uint8_t reg, uint8_t value)
 {
@@ -141,6 +142,7 @@ static void set24_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint32_t v
 static void drdy_callback(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mcp356x_config *config = CONTAINER_OF(cb, struct mcp356x_config, drdy_cb);
+	config->num_irq++;
 	k_sem_give(&config->drdy_sem);
 	//struct mcp356x_data11 data;
 	//mcp356x_data11_get(&config->bus, &data);
@@ -152,7 +154,7 @@ static void drdy_callback(const struct device *port, struct gpio_callback *cb, g
 
 static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 {
-	LOG_INF("mcp356x_acquisition_thread started!");
+	LOG_INF("mcp356x_acquisition_thread started!", 0);
 	while (true)
 	{
 		int err = 0;
@@ -179,6 +181,7 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 			config->n[channel] = 0;
 			config->sum[channel] = 0;
 		}
+		config->num_drdy++;
 	}
 }
 
@@ -188,7 +191,7 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 
 int egadc_init(struct mcp356x_config * config)
 {
-	LOG_INF("Init ADC MCP356X");
+	LOG_INF("Init ADC MCP356X", 0);
 
 
 
@@ -208,8 +211,9 @@ int egadc_init(struct mcp356x_config * config)
 	//MCP356X_CFG_2_GAIN_X_1 |
 	MY_GAIN |
 	MCP356X_CFG_2_AZ_MUX_DIS |
-	MCP356X_CFG_2_AZ_VREF_EN |
-	MCP356X_CFG_2_AZ_FREQ_HIGH
+	//MCP356X_CFG_2_AZ_VREF_EN |
+	//MCP356X_CFG_2_AZ_FREQ_HIGH |
+	0
 	);
 	set8_verbose(&config->bus, MCP356X_REG_CFG_3,
 	MCP356X_CFG_3_CONV_MODE_CONT |
@@ -233,17 +237,18 @@ int egadc_init(struct mcp356x_config * config)
 	//set24_verbose(MCP356X_REG_SCAN, 0);
 	set24_verbose(&config->bus, MCP356X_REG_SCAN, 
 	MCP356X_SCAN_CH0|
-	/*
 	MCP356X_SCAN_CH1|
 	MCP356X_SCAN_CH2|
 	MCP356X_SCAN_CH3|
 	MCP356X_SCAN_CH4|
 	MCP356X_SCAN_CH5|
 	MCP356X_SCAN_CH6|
+	MCP356X_SCAN_CH7|
 	MCP356X_SCAN_VREF|
 	MCP356X_SCAN_TEMP|
 	MCP356X_SCAN_AVDD|
 	MCP356X_SCAN_OFFSET|
+	/*
 	*/
 	0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);

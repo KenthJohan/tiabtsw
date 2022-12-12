@@ -14,5 +14,6 @@ target_include_directories(app PRIVATE ${CMAKE_BINARY_DIR}/app/include src)
 
 target_sources(app PRIVATE src/main.c)
 
-FILE(GLOB app_sources src/*.c)
+#FILE(GLOB app_sources src/*.c)
+FILE(GLOB app_sources src/egadc.c)
 target_sources(app PRIVATE ${app_sources})
