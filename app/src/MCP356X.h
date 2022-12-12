@@ -346,8 +346,16 @@ Analog multiplexer input selection (MUX mode only)
 
 
 
-// 8.8 SCAN Register
-// Bit 23-21 DLY[2:0]: Delay Time (TDLY_SCAN) Between Each Conversion During a Scan Cycle
+/* 8.8 SCAN Register
+Bit 23-21 DLY[2:0]: Delay Time (TDLY_SCAN) Between Each Conversion During a Scan Cycle
+
+When in SCAN mode, the MUX register (address: 0x6)
+becomes a Don’t Care register.
+
+When SCAN[15:0] = 0x0000, SCAN mode is dis-
+abled and the part returns to MUX mode, where the
+input channel selection is defined by the MUX[7:0] bits.
+*/
 #define MCP356X_SCAN_DLY_DM_CLK_X_512        0x00E00000
 #define MCP356X_SCAN_DLY_DM_CLK_X_256        0x00C00000
 #define MCP356X_SCAN_DLY_DM_CLK_X_128        0x00A00000
@@ -486,7 +494,14 @@ static int32_t MCP356X_raw_to_millivolt(int32_t raw, int32_t vref, int32_t gain)
 
 static void MCP356X_ADC_DATA_decode(uint8_t rx[5], int32_t * value, uint32_t * channel)
 {
-	(*channel) = rx[1] >> 4;
+	/*
+	In MUX mode, this 4-bit word
+	is defaulted to ‘0000’ and does not vary with the
+	MUX[7:0] selection. This format is useful for 32-bit
+	MCU applications
+	*/
+	(*channel) = (rx[1] >> 4) & 0x01;
+
 	uint8_t sign = rx[1] & 0x01;
 	(*value) = (rx[2] << 16) | (rx[3] << 8) | (rx[4] << 0);
 	if (sign != 0)

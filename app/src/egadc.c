@@ -162,6 +162,8 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 		k_sem_take(&config->drdy_sem, K_SECONDS(12));
 		int32_t value = 0;
 		uint32_t channel = 0;
+		config->lastdata = get32(&config->bus, MCP356X_REG_ADC_DATA);
+		/*
 		err = mcp356x_data11_get(&config->bus, &value, &channel);
 		if (err) 
 		{
@@ -174,6 +176,7 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 			config->mv[channel] = MCP356X_raw_to_millivolt(value, VREF, MY_GAIN);
 			config->sum[channel] += config->mv[channel];
 		}
+		*/
 		// After 1000 samples then calculate average:
 		if(config->n[channel] > 1000)
 		{
@@ -225,16 +228,19 @@ int egadc_init(struct mcp356x_config * config)
 	MCP356X_CFG_3_CRC_GAIN_CAL_EN
 	);
 	set8_verbose(&config->bus, MCP356X_REG_MUX,
-	MCP356X_MUX_VIN_POS_CH0 | 
-	MCP356X_MUX_VIN_POS_CH1 | 
-	MCP356X_MUX_VIN_POS_CH2 | 
-	MCP356X_MUX_VIN_POS_CH3 | 
+	//MCP356X_MUX_VIN_POS_CH0 | 
+	//MCP356X_MUX_VIN_POS_CH1 | 
+	//MCP356X_MUX_VIN_POS_CH2 | 
+	//MCP356X_MUX_VIN_POS_CH3 | 
 	MCP356X_MUX_VIN_POS_TEMP |
+	//MCP356X_MUX_VIN_POS_AVDD | 
+	//MCP356X_MUX_VIN_POS_VREF_EXT_PLUS|
 	//MCP356X_MUX_VIN_NEG_CH1 |
 	//MCP356X_MUX_VIN_POS_CH0 | 
-	//MCP356X_MUX_VIN_NEG_AGND |
+	MCP356X_MUX_VIN_NEG_AGND |
 	0);
-	//set24_verbose(MCP356X_REG_SCAN, 0);
+	set24_verbose(&config->bus, MCP356X_REG_SCAN, 0);
+	/*
 	set24_verbose(&config->bus, MCP356X_REG_SCAN, 
 	MCP356X_SCAN_CH0|
 	MCP356X_SCAN_CH1|
@@ -248,9 +254,8 @@ int egadc_init(struct mcp356x_config * config)
 	MCP356X_SCAN_TEMP|
 	MCP356X_SCAN_AVDD|
 	MCP356X_SCAN_OFFSET|
-	/*
-	*/
 	0);
+	*/
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH3);
 	

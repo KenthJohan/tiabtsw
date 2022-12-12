@@ -71,9 +71,13 @@ void main(void)
 	static int32_t i = 0;
 	while (1)
 	{
+		printk("%08X\n", c.lastdata);
+		/*
 		printk("                      " MCP356X_PRINTF_HEADER "\n");
 		printk("%8i %8i avg " MCP356X_PRINTF_PLUS "\n", c.num_irq, c.num_drdy, MCP356X_ARGS(c.avg));
 		printk("%8i %8i mv  " MCP356X_PRINTF_PLUS "\n", c.num_irq, c.num_drdy, MCP356X_ARGS(c.mv));
+		printk("%8i %8i mv  " MCP356X_PRINTF_PLUS "\n", c.num_irq, c.num_drdy, MCP356X_ARGS(c.n));
+		*/
 		
 		//mybt_progress();
 		//bt_bas_set_battery_level(i++);
