@@ -80,27 +80,22 @@ registers made of volatile memory.
 The data can be
 formatted in 24/32-bit modes depending on the DATA_FORMAT
 */
-#define MCP356X_REG_ADC_DATA                 0x00
-/*
-8.2 CONFIG0 Register
-*/
-#define MCP356X_REG_CFG_0                    0x01
-#define MCP356X_REG_CFG_1                    0x02
-#define MCP356X_REG_CFG_2                    0x03
-#define MCP356X_REG_CFG_3                    0x04
-#define MCP356X_REG_IRQ                      0x05
-/*
-5.1 Analog Input Multiplexer
-*/
-#define MCP356X_REG_MUX                      0x06
-#define MCP356X_REG_SCAN                     0x07
-#define MCP356X_REG_TIMER                    0x08
-#define MCP356X_REG_OFFSET_CAL               0x09
-#define MCP356X_REG_GAIN_CAL                 0x0A
-#define MCP356X_RSV_REG_W_A                  0x0B
-#define MCP356X_REG_LOCK                     0x0D
-#define MCP356X_RSV_REG                      0x0E
-#define MCP356X_REG_CRC_CFG                  0x0F
+#define MCP356X_REG_ADC_DATA                 0x00 // 4/24/32 R
+#define MCP356X_REG_CFG_0                    0x01 // 8       RW
+#define MCP356X_REG_CFG_1                    0x02 // 8       RW
+#define MCP356X_REG_CFG_2                    0x03 // 8       RW
+#define MCP356X_REG_CFG_3                    0x04 // 8       RW
+#define MCP356X_REG_IRQ                      0x05 // 8       RW
+#define MCP356X_REG_MUX                      0x06 // 8       RW
+#define MCP356X_REG_SCAN                     0x07 // 24      RW
+#define MCP356X_REG_TIMER                    0x08 // 24      RW
+#define MCP356X_REG_OFFSET_CAL               0x09 // 24      RW
+#define MCP356X_REG_GAIN_CAL                 0x0A // 24      RW
+#define MCP356X_RSV_REG_W_A                  0x0B // 24      RW
+#define MCP356X_REG_C                        0x0C // 8       RW
+#define MCP356X_REG_LOCK                     0x0D // 8       RW
+#define MCP356X_RSV_REG                      0x0E // 16      RW
+#define MCP356X_REG_CRC_CFG                  0x0F // 16      R
 
 static char const * MCP356X_REG_tostring(int a)
 {
@@ -492,7 +487,7 @@ static int32_t MCP356X_raw_to_millivolt(int32_t raw, int32_t vref, int32_t gain)
 }
 
 
-static void MCP356X_ADC_DATA_decode(uint8_t rx[5], int32_t * value, uint32_t * channel)
+static void MCP356X_ADC_DATA_decode_11(uint8_t rx[5], int32_t * value, uint32_t * channel)
 {
 	/*
 	In MUX mode, this 4-bit word
@@ -507,5 +502,52 @@ static void MCP356X_ADC_DATA_decode(uint8_t rx[5], int32_t * value, uint32_t * c
 	if (sign != 0)
 	{
 		(*value) -= 16777215;
+	}
+}
+
+
+
+
+static uint32_t MCP356X_get_len(uint8_t reg)
+{
+	switch(reg)
+	{
+	case MCP356X_REG_ADC_DATA:
+		return 4; // 32 bit
+	case MCP356X_REG_CFG_0:
+	case MCP356X_REG_CFG_1:
+	case MCP356X_REG_CFG_2:
+	case MCP356X_REG_CFG_3:
+	case MCP356X_REG_IRQ:
+	case MCP356X_REG_MUX:
+		return 1; // 8 bit
+	case MCP356X_REG_SCAN:
+	case MCP356X_REG_TIMER:
+	case MCP356X_REG_OFFSET_CAL:
+	case MCP356X_REG_GAIN_CAL:
+	case MCP356X_RSV_REG_W_A:
+		return 3; // 24 bit
+	case MCP356X_REG_C:
+	case MCP356X_REG_LOCK:
+		return 1; // 8 bit
+	case MCP356X_RSV_REG:
+	case MCP356X_REG_CRC_CFG:
+		return 2; // 16 bit
+	default:
+		return 0;
+		break;
+	}
+}
+
+
+static uint32_t MCP356X_get_value(uint8_t rx[5], uint8_t len)
+{
+	switch (len)
+	{
+	case 1: return (rx[1] << 0);
+	case 2: return (rx[1] << 8) | (rx[2] << 0);
+	case 3: return (rx[1] << 16) | (rx[2] << 8) | (rx[3] << 0);
+	case 4: return (rx[1] << 24) | (rx[2] << 16) | (rx[3] << 8) | (rx[4] << 0);
+	default: return 0;
 	}
 }

@@ -13,6 +13,51 @@ LOG_MODULE_REGISTER(adc_mcp356x, LOG_LEVEL_DBG);
 //#define VREF  2048
 #define VREF 3000
 
+
+static int my_transceive(const struct spi_dt_spec *bus, uint8_t *tx, uint8_t *rx, uint8_t reg, uint8_t len)
+{
+	struct spi_buf buf_tx[] = {{.buf = tx,.len = len+1}};
+	struct spi_buf buf_rx[] = {{.buf = rx,.len = len+1}};
+	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
+	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
+	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, MCP356X_CMD_INC_READ);
+	tx[1] = 0; // Need to write in order to read. Exchange 0 for reading data.
+	tx[2] = 0; // Need to write in order to read. Exchange 0 for reading data.
+	tx[3] = 0; // Need to write in order to read. Exchange 0 for reading data.
+	tx[4] = 0; // Need to write in order to read. Exchange 0 for reading data.
+	int err = 0;
+	err = spi_transceive_dt(bus, &tx_buf, &rx_buf);
+	if (err) {return err;}
+	return 0;
+}
+
+
+
+static uint32_t get(const struct spi_dt_spec *bus, uint8_t reg)
+{
+	uint8_t len = MCP356X_get_len(reg);
+	uint8_t tx[5] = {0};
+	uint8_t rx[5] = {0};
+	my_transceive(bus, tx, rx, reg, len);
+	uint32_t v = MCP356X_get_value(rx, len);
+	//printk("MCP356X_get_value: %2i : %02X : %02X %02X %02X %02X : %5i\n", len, rx[0], rx[1], rx[2], rx[3], rx[4], v);
+	return v;
+}
+
+
+static int get_data_11(const struct spi_dt_spec *bus, int32_t * value, uint32_t * channel)
+{
+	uint8_t reg = MCP356X_REG_ADC_DATA;
+	uint8_t len = 4;
+	uint8_t tx[5] = {0};
+	uint8_t rx[5] = {0};
+	my_transceive(bus, tx, rx, reg, len);
+	MCP356X_ADC_DATA_decode_11(rx, value, channel);
+	return 0;
+}
+
+
+
 static void set8(const struct spi_dt_spec *bus, uint8_t reg, uint8_t value)
 {
 	uint8_t tx[2] = {0};
@@ -25,81 +70,6 @@ static void set8(const struct spi_dt_spec *bus, uint8_t reg, uint8_t value)
 	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
 	spi_transceive_dt(bus, &tx_buf, &rx_buf);
 }
-
-
-static uint8_t get8(const struct spi_dt_spec *bus, uint8_t reg)
-{
-	uint8_t tx[2] = {0};
-	uint8_t rx[2] = {0};
-	struct spi_buf buf_tx[] = {{.buf = &tx,.len = sizeof(tx)}};
-	struct spi_buf buf_rx[] = {{.buf = &rx,.len = sizeof(rx)}};
-	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
-	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
-	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, MCP356X_CMD_INC_READ);
-	tx[1] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	spi_transceive_dt(bus, &tx_buf, &rx_buf);
-	return rx[1];
-}
-
-static uint32_t get24(const struct spi_dt_spec *bus, uint8_t reg)
-{
-	uint8_t tx[4] = {0};
-	uint8_t rx[4] = {0};
-	struct spi_buf buf_tx[] = {{.buf = &tx,.len = sizeof(tx)}};
-	struct spi_buf buf_rx[] = {{.buf = &rx,.len = sizeof(rx)}};
-	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
-	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
-	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, MCP356X_CMD_INC_READ);
-	tx[1] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[2] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[3] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	spi_transceive_dt(bus, &tx_buf, &rx_buf);
-	uint32_t v = (rx[1] << 16) | (rx[2] << 8) | (rx[3] << 0);
-	return v;
-}
-
-static uint32_t get32(const struct spi_dt_spec *bus, uint8_t reg)
-{
-	uint8_t tx[5] = {0};
-	uint8_t rx[5] = {0};
-	struct spi_buf buf_tx[] = {{.buf = &tx,.len = sizeof(tx)}};
-	struct spi_buf buf_rx[] = {{.buf = &rx,.len = sizeof(rx)}};
-	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
-	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
-	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, MCP356X_CMD_INC_READ);
-	tx[1] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[2] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[3] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[4] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	spi_transceive_dt(bus, &tx_buf, &rx_buf);
-	uint32_t v = (rx[1] << 24) | (rx[2] << 16) | (rx[3] << 8) | (rx[4] << 0);
-	return v;
-}
-
-static int mcp356x_data11_get(const struct spi_dt_spec *bus, int32_t * value, uint32_t * channel)
-{
-	uint8_t tx[5] = {0};
-	uint8_t rx[5] = {0};
-	struct spi_buf buf_tx[] = {{.buf = &tx,.len = sizeof(tx)}};
-	struct spi_buf buf_rx[] = {{.buf = &rx,.len = sizeof(rx)}};
-	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
-	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
-	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, MCP356X_REG_ADC_DATA, MCP356X_CMD_INC_READ);
-	tx[1] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[2] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[3] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[4] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	
-	//printk("rx: %02x %02x %02x %02x %02x\n", rx[0], rx[1], rx[2], rx[3], rx[4]);
-
-	int err = 0;
-	err = spi_transceive_dt(bus, &tx_buf, &rx_buf);
-	if (err) {return err;}
-
-	MCP356X_ADC_DATA_decode(rx, value, channel);
-	return 0;
-}
-
 
 static void set24(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
 {
@@ -116,26 +86,19 @@ static void set24(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
 	spi_transceive_dt(bus, &tx_buf, &rx_buf);
 }
 
-
-
 static void set8_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint8_t value)
 {
 	set8(bus, reg, value);
-	uint8_t v = get8(bus, reg);
+	uint32_t v = get(bus, reg);
 	LOG_INF("SET8: %s: %02x %02x", MCP356X_REG_tostring(reg), value, v);
 }
 
 static void set24_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
 {
 	set24(bus, reg, value);
-	uint32_t v = get24(bus, reg);
+	uint32_t v = get(bus, reg);
 	LOG_INF("SET24: %s: %08x %08x", MCP356X_REG_tostring(reg), value, v);
 }
-
-
-
-
-
 
 
 
@@ -162,10 +125,8 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 		k_sem_take(&config->drdy_sem, K_SECONDS(12));
 		int32_t value = 0;
 		uint32_t channel = 0;
-		config->lastdata = get32(&config->bus, MCP356X_REG_ADC_DATA);
-		/*
-		err = mcp356x_data11_get(&config->bus, &value, &channel);
-		if (err) 
+		err = get_data_11(&config->bus, &value, &channel);
+		if (err)
 		{
 			printk("mcp356x_acquisition_thread error: %i\n", err);
 			continue;
@@ -176,7 +137,7 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 			config->mv[channel] = MCP356X_raw_to_millivolt(value, VREF, MY_GAIN);
 			config->sum[channel] += config->mv[channel];
 		}
-		*/
+
 		// After 1000 samples then calculate average:
 		if(config->n[channel] > 1000)
 		{
