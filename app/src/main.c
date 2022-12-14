@@ -55,6 +55,10 @@ struct mcp356x_config c =
 };
 
 
+// The ADC9 uses 2000mV voltage ref chip MCP1501
+#define ADC9_VREF 2048
+#define TIABT_VREF 3000
+
 void main(void)
 {
 	LOG_INF("Zephyr Example Application %s", "" DT_NODE_PATH(DT_NODELABEL(examplesensor0)));
@@ -66,6 +70,8 @@ void main(void)
 	}
 	
 	
+	c.gain = MCP356X_CFG_2_GAIN_X_033;
+	c.vref = TIABT_VREF;
 	egadc_init(&c);
 	//mybt_init();
 

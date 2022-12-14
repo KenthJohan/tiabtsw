@@ -9,9 +9,7 @@
 
 LOG_MODULE_REGISTER(adc_mcp356x, LOG_LEVEL_DBG);
 
-// The ADC9 uses 2000mV voltage ref chip MCP1501
-//#define VREF  2048
-#define VREF 3000
+
 
 
 static int my_transceive(const struct spi_dt_spec *bus, uint8_t *tx, uint8_t *rx, uint8_t reg, uint8_t len, uint8_t cmd)
@@ -40,7 +38,10 @@ static uint32_t get(const struct spi_dt_spec *bus, uint8_t reg)
 	return v;
 }
 
+/*
+In MUX mode, channel is defaulted to 0.
 
+*/
 static int get_data_11(const struct spi_dt_spec *bus, int32_t * value, uint32_t * channel)
 {
 	uint8_t reg = MCP356X_REG_ADC_DATA;
@@ -81,7 +82,7 @@ static void drdy_callback(const struct device *port, struct gpio_callback *cb, g
 }
 
 
-#define MY_GAIN MCP356X_CFG_2_GAIN_X_033
+
 
 
 static void mcp356x_acquisition_thread(struct mcp356x_config * config)
@@ -103,7 +104,7 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 		if (channel < MCP356X_CHANNEL_COUNT)
 		{
 			config->n[channel]++;
-			config->mv[channel] = MCP356X_raw_to_millivolt(value, VREF, MY_GAIN);
+			config->mv[channel] = MCP356X_raw_to_millivolt(value, config->vref, config->gain);
 			config->sum[channel] += config->mv[channel];
 		}
 
@@ -142,7 +143,7 @@ int egadc_init(struct mcp356x_config * config)
 	set(&config->bus, MCP356X_REG_CFG_2,
 	MCP356X_CFG_2_BOOST_X_1 |
 	//MCP356X_CFG_2_GAIN_X_1 |
-	MY_GAIN |
+	config->gain |
 	MCP356X_CFG_2_AZ_MUX_DIS |
 	//MCP356X_CFG_2_AZ_VREF_EN |
 	//MCP356X_CFG_2_AZ_FREQ_HIGH |

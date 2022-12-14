@@ -21,6 +21,8 @@ struct mcp356x_config
 	int mv[MCP356X_CHANNEL_COUNT];
 	int sum[MCP356X_CHANNEL_COUNT];
 	int avg[MCP356X_CHANNEL_COUNT];
+	uint32_t gain;
+	uint32_t vref;
 	uint32_t lastdata;
 	K_KERNEL_STACK_MEMBER(stack, ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE);
 };
