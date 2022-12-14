@@ -14,17 +14,13 @@ LOG_MODULE_REGISTER(adc_mcp356x, LOG_LEVEL_DBG);
 #define VREF 3000
 
 
-static int my_transceive(const struct spi_dt_spec *bus, uint8_t *tx, uint8_t *rx, uint8_t reg, uint8_t len)
+static int my_transceive(const struct spi_dt_spec *bus, uint8_t *tx, uint8_t *rx, uint8_t reg, uint8_t len, uint8_t cmd)
 {
 	struct spi_buf buf_tx[] = {{.buf = tx,.len = len+1}};
 	struct spi_buf buf_rx[] = {{.buf = rx,.len = len+1}};
 	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
 	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
-	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, MCP356X_CMD_INC_READ);
-	tx[1] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[2] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[3] = 0; // Need to write in order to read. Exchange 0 for reading data.
-	tx[4] = 0; // Need to write in order to read. Exchange 0 for reading data.
+	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, cmd);
 	int err = 0;
 	err = spi_transceive_dt(bus, &tx_buf, &rx_buf);
 	if (err) {return err;}
@@ -38,7 +34,7 @@ static uint32_t get(const struct spi_dt_spec *bus, uint8_t reg)
 	uint8_t len = MCP356X_get_len(reg);
 	uint8_t tx[5] = {0};
 	uint8_t rx[5] = {0};
-	my_transceive(bus, tx, rx, reg, len);
+	my_transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_READ);
 	uint32_t v = MCP356X_get_value(rx, len);
 	//printk("MCP356X_get_value: %2i : %02X : %02X %02X %02X %02X : %5i\n", len, rx[0], rx[1], rx[2], rx[3], rx[4], v);
 	return v;
@@ -51,54 +47,27 @@ static int get_data_11(const struct spi_dt_spec *bus, int32_t * value, uint32_t 
 	uint8_t len = 4;
 	uint8_t tx[5] = {0};
 	uint8_t rx[5] = {0};
-	my_transceive(bus, tx, rx, reg, len);
+	my_transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_READ);
 	MCP356X_ADC_DATA_decode_11(rx, value, channel);
 	return 0;
 }
 
 
 
-static void set8(const struct spi_dt_spec *bus, uint8_t reg, uint8_t value)
+#define MCP356X_LOG_SET_VALUE
+static int set(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
 {
-	uint8_t tx[2] = {0};
-	uint8_t rx[2] = {0};
-	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, MCP356X_CMD_INC_WRITE);
-	tx[1] = value;
-	struct spi_buf buf_tx[] = {{.buf = &tx,.len = sizeof(tx)}};
-	struct spi_buf buf_rx[] = {{.buf = &rx,.len = sizeof(rx)}};
-	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
-	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
-	spi_transceive_dt(bus, &tx_buf, &rx_buf);
-}
-
-static void set24(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
-{
-	uint8_t tx[4] = {0};
-	uint8_t rx[4] = {0};
-	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, MCP356X_CMD_INC_WRITE);
-	tx[1] = ( value >> 16 ) & 0xFF;
-	tx[2] = ( value >> 8 ) & 0xFF;
-	tx[3] = ( value >> 0 ) & 0xFF;
-	struct spi_buf buf_tx[] = {{.buf = &tx,.len = sizeof(tx)}};
-	struct spi_buf buf_rx[] = {{.buf = &rx,.len = sizeof(rx)}};
-	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
-	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
-	spi_transceive_dt(bus, &tx_buf, &rx_buf);
-}
-
-static void set8_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint8_t value)
-{
-	set8(bus, reg, value);
+	uint8_t len = MCP356X_get_len(reg);
+	uint8_t tx[5] = {0};
+	uint8_t rx[5] = {0};
+	MCP356X_set_value(tx, len, value);
+	my_transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_WRITE);
+#ifdef MCP356X_LOG_SET_VALUE
 	uint32_t v = get(bus, reg);
-	LOG_INF("SET8: %s: %02x %02x", MCP356X_REG_tostring(reg), value, v);
+	LOG_INF("Register set: %s: %08x %08x", MCP356X_REG_tostring(reg), value, v);
+#endif
 }
 
-static void set24_verbose(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
-{
-	set24(bus, reg, value);
-	uint32_t v = get(bus, reg);
-	LOG_INF("SET24: %s: %08x %08x", MCP356X_REG_tostring(reg), value, v);
-}
 
 
 
@@ -159,18 +128,18 @@ int egadc_init(struct mcp356x_config * config)
 
 
 
-	set8_verbose(&config->bus, MCP356X_REG_CFG_0,
+	set(&config->bus, MCP356X_REG_CFG_0,
 	MCP356X_CFG_0_VREF_SEL_0 |
 	MCP356X_CFG_0_CLK_SEL_2 |
 	MCP356X_CFG_0_CS_SEL_0 |
 	MCP356X_CFG_0_MODE_CONV
 	);
-	set8_verbose(&config->bus, MCP356X_REG_CFG_1,
+	set(&config->bus, MCP356X_REG_CFG_1,
 	MCP356X_CFG_1_PRE_1 |
 	MCP356X_CFG_1_OSR_32 |
 	MCP356X_CFG_1_DITHER_DEF
 	);
-	set8_verbose(&config->bus, MCP356X_REG_CFG_2,
+	set(&config->bus, MCP356X_REG_CFG_2,
 	MCP356X_CFG_2_BOOST_X_1 |
 	//MCP356X_CFG_2_GAIN_X_1 |
 	MY_GAIN |
@@ -179,7 +148,7 @@ int egadc_init(struct mcp356x_config * config)
 	//MCP356X_CFG_2_AZ_FREQ_HIGH |
 	0
 	);
-	set8_verbose(&config->bus, MCP356X_REG_CFG_3,
+	set(&config->bus, MCP356X_REG_CFG_3,
 	MCP356X_CFG_3_CONV_MODE_CONT |
 	//MCP356X_CFG_3_DATA_FORMAT_DEF |
 	MCP356X_CFG_3_DATA_FORMAT_CH_ADC |
@@ -188,19 +157,19 @@ int egadc_init(struct mcp356x_config * config)
 	MCP356X_CFG_3_CRC_OFF_CAL_EN |
 	MCP356X_CFG_3_CRC_GAIN_CAL_EN
 	);
-	set8_verbose(&config->bus, MCP356X_REG_MUX,
+	set(&config->bus, MCP356X_REG_MUX,
 	//MCP356X_MUX_VIN_POS_CH0 | 
 	//MCP356X_MUX_VIN_POS_CH1 | 
 	//MCP356X_MUX_VIN_POS_CH2 | 
 	//MCP356X_MUX_VIN_POS_CH3 | 
-	MCP356X_MUX_VIN_POS_TEMP |
+	//MCP356X_MUX_VIN_POS_TEMP |
 	//MCP356X_MUX_VIN_POS_AVDD | 
-	//MCP356X_MUX_VIN_POS_VREF_EXT_PLUS|
+	MCP356X_MUX_VIN_POS_VREF_EXT_PLUS|
 	//MCP356X_MUX_VIN_NEG_CH1 |
 	//MCP356X_MUX_VIN_POS_CH0 | 
 	MCP356X_MUX_VIN_NEG_AGND |
 	0);
-	set24_verbose(&config->bus, MCP356X_REG_SCAN, 0);
+	set(&config->bus, MCP356X_REG_SCAN, 0);
 	/*
 	set24_verbose(&config->bus, MCP356X_REG_SCAN, 
 	MCP356X_SCAN_CH0|
@@ -220,11 +189,11 @@ int egadc_init(struct mcp356x_config * config)
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH0);
 	//set24_verbose(bus, MCP356X_REG_SCAN, MCP356X_SCAN_CH3);
 	
-	set24_verbose(&config->bus, MCP356X_REG_IRQ, MCP356X_IRQ_MODE_LOGIC_HIGH);
-	set24_verbose(&config->bus, MCP356X_REG_OFFSET_CAL, 0);
-	set24_verbose(&config->bus, MCP356X_REG_GAIN_CAL, 0x00800000);
+	set(&config->bus, MCP356X_REG_IRQ, MCP356X_IRQ_MODE_LOGIC_HIGH);
+	set(&config->bus, MCP356X_REG_OFFSET_CAL, 0);
+	set(&config->bus, MCP356X_REG_GAIN_CAL, 0x00800000);
 	//set24_verbose(MCP356X_RSV_REG_W_A, 0x00900F00);
-	set24_verbose(&config->bus, MCP356X_RSV_REG_W_A, 0x00900000);
+	set(&config->bus, MCP356X_RSV_REG_W_A, 0x00900000);
 
 
 

@@ -551,3 +551,35 @@ static uint32_t MCP356X_get_value(uint8_t rx[5], uint8_t len)
 	default: return 0;
 	}
 }
+
+
+static void MCP356X_set_value(uint8_t tx[5], uint8_t len, uint32_t value)
+{
+	switch (len)
+	{
+	case 1:
+		tx[1] = ( value >> 0 ) & 0xFF;
+		break;
+	case 2:
+		tx[1] = ( value >> 8 ) & 0xFF;
+		tx[2] = ( value >> 0 ) & 0xFF;
+		break;
+	case 3:
+		tx[1] = ( value >> 16 ) & 0xFF;
+		tx[2] = ( value >> 8 ) & 0xFF;
+		tx[3] = ( value >> 0 ) & 0xFF;
+		break;
+	case 4:
+		tx[1] = ( value >> 24 ) & 0xFF;
+		tx[2] = ( value >> 16 ) & 0xFF;
+		tx[3] = ( value >> 8 ) & 0xFF;
+		tx[4] = ( value >> 0 ) & 0xFF;
+		break;
+	default:
+		tx[1] = 0;
+		tx[2] = 0;
+		tx[3] = 0;
+		tx[4] = 0;
+		break;
+	}
+}
