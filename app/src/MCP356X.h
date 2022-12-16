@@ -467,10 +467,10 @@ input channel selection is defined by the MUX[7:0] bits.
 000 = Gain is x1/3
 */
 
-static int32_t MCP356X_raw_to_millivolt(int32_t raw, int32_t vref, int32_t gain)
+static int32_t MCP356X_raw_to_millivolt(int32_t raw, int32_t vref_mv, int32_t gain_reg)
 {
-	int32_t c = (MCP356X_CALC_COEF / vref);
-	switch(gain)
+	int32_t c = (MCP356X_CALC_COEF / vref_mv);
+	switch(gain_reg)
 	{
 	case MCP356X_CFG_2_GAIN_X_64  : c *= 64; break;
 	case MCP356X_CFG_2_GAIN_X_32  : c *= 32; break;

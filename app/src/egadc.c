@@ -12,45 +12,42 @@ LOG_MODULE_REGISTER(adc_mcp356x, LOG_LEVEL_DBG);
 
 
 
-static int my_transceive(const struct spi_dt_spec *bus, uint8_t *tx, uint8_t *rx, uint8_t reg, uint8_t len, uint8_t cmd)
+int transceive(const struct spi_dt_spec *bus, uint8_t *tx, uint8_t *rx, uint8_t reg, uint8_t len, uint8_t cmd)
 {
 	struct spi_buf buf_tx[] = {{.buf = tx,.len = len+1}};
 	struct spi_buf buf_rx[] = {{.buf = rx,.len = len+1}};
 	struct spi_buf_set tx_buf = {.buffers = buf_tx, .count = 1};
 	struct spi_buf_set rx_buf = {.buffers = buf_rx, .count = 1};
 	tx[0] = MCP356X_COMMAND_BYTE(MCP356X_DEVICE_ADR, reg, cmd);
-	int err = 0;
-	err = spi_transceive_dt(bus, &tx_buf, &rx_buf);
-	if (err) {return err;}
-	return 0;
+	int rv = spi_transceive_dt(bus, &tx_buf, &rx_buf);
+	return rv;
 }
 
 
 
-static uint32_t get(const struct spi_dt_spec *bus, uint8_t reg)
+int get(const struct spi_dt_spec *bus, uint8_t reg, uint32_t * value)
 {
 	uint8_t len = MCP356X_get_len(reg);
 	uint8_t tx[5] = {0};
 	uint8_t rx[5] = {0};
-	my_transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_READ);
-	uint32_t v = MCP356X_get_value(rx, len);
+	int rv = transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_READ);
+	*value = MCP356X_get_value(rx, len);
 	//printk("MCP356X_get_value: %2i : %02X : %02X %02X %02X %02X : %5i\n", len, rx[0], rx[1], rx[2], rx[3], rx[4], v);
-	return v;
+	return rv;
 }
 
 /*
 In MUX mode, channel is defaulted to 0.
-
 */
-static int get_data_11(const struct spi_dt_spec *bus, int32_t * value, uint32_t * channel)
+int get_data_11(const struct spi_dt_spec *bus, int32_t * value, uint32_t * channel)
 {
 	uint8_t reg = MCP356X_REG_ADC_DATA;
 	uint8_t len = 4;
 	uint8_t tx[5] = {0};
 	uint8_t rx[5] = {0};
-	my_transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_READ);
+	int rv = transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_READ);
 	MCP356X_ADC_DATA_decode_11(rx, value, channel);
-	return 0;
+	return rv;
 }
 
 
@@ -62,11 +59,13 @@ static int set(const struct spi_dt_spec *bus, uint8_t reg, uint32_t value)
 	uint8_t tx[5] = {0};
 	uint8_t rx[5] = {0};
 	MCP356X_set_value(tx, len, value);
-	my_transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_WRITE);
+	int rv = transceive(bus, tx, rx, reg, len, MCP356X_CMD_INC_WRITE);
 #ifdef MCP356X_LOG_SET_VALUE
-	uint32_t v = get(bus, reg);
-	LOG_INF("Register set: %s: %08x %08x", MCP356X_REG_tostring(reg), value, v);
+	uint32_t value2;
+	rv = get(bus, reg, &value2);
+	LOG_INF("Register set: %s: %08x %08x", MCP356X_REG_tostring(reg), value, value2);
 #endif
+return rv;
 }
 
 
@@ -104,7 +103,7 @@ static void mcp356x_acquisition_thread(struct mcp356x_config * config)
 		if (channel < MCP356X_CHANNEL_COUNT)
 		{
 			config->n[channel]++;
-			config->mv[channel] = MCP356X_raw_to_millivolt(value, config->vref, config->gain);
+			config->mv[channel] = MCP356X_raw_to_millivolt(value, config->vref_mv, config->gain_reg);
 			config->sum[channel] += config->mv[channel];
 		}
 
@@ -143,7 +142,7 @@ int egadc_init(struct mcp356x_config * config)
 	set(&config->bus, MCP356X_REG_CFG_2,
 	MCP356X_CFG_2_BOOST_X_1 |
 	//MCP356X_CFG_2_GAIN_X_1 |
-	config->gain |
+	config->gain_reg |
 	MCP356X_CFG_2_AZ_MUX_DIS |
 	//MCP356X_CFG_2_AZ_VREF_EN |
 	//MCP356X_CFG_2_AZ_FREQ_HIGH |

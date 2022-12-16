@@ -9,21 +9,19 @@
 struct mcp356x_config
 {
 	const struct spi_dt_spec bus;
-	struct gpio_dt_spec irq;
+	struct gpio_dt_spec irq; /* GPIO  */
 	struct k_sem acq_sem;		/* Signal acq thread for next sample */
 	struct k_sem drdy_sem;		/* Signal data ready IRQ */
 	struct gpio_callback drdy_cb;	/* For data ready IRQ */
 	struct k_thread thread;		/* Acquisition thread */
-	int dummy;
 	int num_irq;
 	int num_drdy;
 	int n[MCP356X_CHANNEL_COUNT];
 	int mv[MCP356X_CHANNEL_COUNT];
 	int sum[MCP356X_CHANNEL_COUNT];
 	int avg[MCP356X_CHANNEL_COUNT];
-	uint32_t gain;
-	uint32_t vref;
-	uint32_t lastdata;
+	uint8_t gain_reg; /* Gain register value */
+	uint16_t vref_mv; /* Voltage reference millivolt value */
 	K_KERNEL_STACK_MEMBER(stack, ADC_MCP356X_ACQUISITION_THREAD_STACK_SIZE);
 };
 

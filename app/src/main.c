@@ -70,8 +70,8 @@ void main(void)
 	}
 	
 	
-	c.gain = MCP356X_CFG_2_GAIN_X_033;
-	c.vref = TIABT_VREF;
+	c.gain_reg = MCP356X_CFG_2_GAIN_X_033;
+	c.vref_mv = TIABT_VREF;
 	egadc_init(&c);
 	//mybt_init();
 
